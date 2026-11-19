@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "npcHardCap": 6,
+  "maxTurns": 40,
+  "listenTimeoutMs": 30000,
+  "autonomousWhenPlayerAbsent": true,
+  "defaultMode": "broadcast",
+  "maxContent": 400,
+  "maxAction": 120,
+  "maxThought": 300,
+  "maxPlan": 200,
+  "wakeOnMultiTarget": true,
+  "wakeOnLocationChange": true,
+  "llm": {
+    "temperature": 0.7,
+    "maxTokens": 600
+  },
+  "messages": {
+    "unknownMode": "unknown utterance mode",
+    "speakerAbsent": "speaker is not present",
+    "targetRequired": "exactly one present target is required",
+    "targetAbsent": "target is not present",
+    "actionRequired": "an action is required",
+    "contentTooLong": "content exceeds the limit",
+    "actionTooLong": "action exceeds the limit",
+    "userPrompt": "按上面的 JSON 格式输出你这一轮的决定。",
+    "invalidUtterance": "发言无效",
+    "auditUnavailable": "审核器不可用，本轮不发布",
+    "modeFileEmpty": "模式定义文件为空",
+    "sessionNotFound": "会话不存在或已关闭",
+    "storeUnavailable": "落盘仍不可用，可安全重试",
+    "memoryRejected": "本轮记忆写入被拒，发言未落库",
+    "storeFlushFailed": "落盘失败，稍后可安全重试"
+  },
+  "autonomy": {
+    "minReplyIntervalMs": 30000,
+    "maxMessagesPerNpcPerHour": 12,
+    "maxNpcCallsPerTick": 4,
+    "maxTurnsPerTick": 2,
+    "idleTimeoutMs": 300000,
+    "playerPresentGraceMs": 60000
+  }
+}

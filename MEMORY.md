@@ -3,7 +3,7 @@
 > **用途**：让新会话 / 新协作者在 5 分钟内恢复上下文——代码架构、工程规范、工程进度、各分支的关键决策与遗留。
 > **维护规则**：见 `AGENTS.md` §11（读取时机、按分支写入、提交/审阅合并时的写法）。
 > **定位**：活文档，只追加、不覆盖；不是契约。与 `docs/03-接口总表.md` 冲突时以 `docs/03` 为准。
-> **最后更新**：2026-11-19（PR #72 补访客续玩、审计故障和 Nginx 部署修复，本分支 CONTRACT 3.5.0）
+> **最后更新**：2026-11-19（**PR #51「dev/v2 群聊对话 + 微信/八卦引擎」已合入 main**（merge commit `02a3318`，CONTRACT 3.5.0→3.6.0，第 13 原语 `msg.send`）；main 现为 72 文件 / 536 用例、契约 8/8（3.6.0）、错误码 39；适配指南见 `docs/v2/前端适配更新指南.md`、`docs/v2/后端模块适配更新指南.md`，待办 issues #85–#92）
 
 ---
 
@@ -11,12 +11,12 @@
 
 | 项 | 值 |
 |---|---|
-| 主分支 | `main`（sha 见 `git rev-parse --short main`；PR #4/#5、PR #9–#13（`v0.5.0`）、PR #22–#24（`v0.5.1` @ `42690c9`）、PR #43–#45（`v0.5.2`）、PR #50（Turn 幂等 `2c51028`，`v0.5.3`）、PR #52（NPC 认识与名字解锁 `f328bc3`，`v0.5.4`）、PR #55（地图出站脱敏 `4c85797`）、PR #56（档案下发收窄 `2547d73`）、PR #71（回滚未授权合并 `8784b3b` → `35e0c57`）依次合入） |
-| `CONTRACT_VERSION` | **本分支 3.5.0（main 为 3.4.1）**（3.2.0 minor：只增端点/类型/可选字段；3.2.1 patch：三条 issue 修复；3.3.0 minor：房间 404 拒绝路径 + tick 单批原子 + 记忆内部修复，新增 `E_ROOM_NOT_FOUND`；3.4.0 minor：NPC 认识/名字解锁（`TurnRequest.targetNpcId?`、`knows_name`、占位名视图、`/state`+`/history` 脱敏）；3.4.1 patch：#53 地图出站脱敏 + #54 档案下发收窄（派生视图，不进 schema）；**3.5.0 minor（本分支）：简易用户系统/管理端点/额度与行动核对 + 房间授权 gate（#33）**；`SCHEMA_VERSION 2`，`API_VERSION 2`，`WORLD_MEM_VERSION 1`） |
-| `PROMPT_VERSION` | **2026-11-18.1**（S1 增「只有在场者能说话/行动」；多 NPC 记忆按人分段） |
-| 测试 | **64 文件 / 478 用例全过**；`check:contract` **8 项全过**（3.5.0，错误码 35/35）；`typecheck` 0 错；`build:web` 295.53 kB / gzip 94.28 kB |
-| 已具备 | M0 骨架、地图模块（旅行/场景/草案双审）、引擎 3.0.0（原子结算 + 持久化闭环）、内容审核层、现实锚定层、前端体验与运行时模型接入、记忆子系统 3.1.0（P0–P4）、地图交互打磨 + 图鉴 registry 收口（PR #5）、**图鉴 GalleryView/scenarios 数据化（PR #12）、存档索引/回合历史/会话恢复 MVP（PR #13）、store 鲁棒性（PR #9）、整回合预算显式化（PR #11）、文档职责整理（PR #10）、多 NPC 各自记忆注入与工作记忆滚动（PR #24）、LLM 格式容错/自动重问（PR #23）、点不在场 NPC 隔离与可重试错误重试（PR #22）、房间入口 404 守卫 + tick 单批原子（PR #44）、部署一致性边界文档（PR #43）、记忆可信边界/repair 补写/compact 接线（PR #45）、Turn 幂等（同 `clientTurnId` 只结算一次，进程内；PR #50）、NPC 认识与名字解锁（陌生人占位名/问名字解锁/图鉴同步；PR #52）、地图出站脱敏（#53，PR #55）、`/scenarios` 公开字段收窄与气泡档案门控（#54，PR #56）** |
-| 下一步 | M1：单房单 NPC 完整玩法、夜间 tick/密谋编排；M2 模块宿主验收（`study` 只加目录）；issue #3 余项：`/state` 原始 attrs 过滤 + `self` 看自己口径；存档 MVP 后续：多槽/导出/跨设备、历史一次 200 行上限；PR #19（登录/部署）已按复审要求回滚（PR #71），修复版重提为 **PR #72**（待复审）；后续：roomGate 存在性缓存、compact 非事件持久化的已知限制、Turn 幂等跨重启持久化（需 EventLog 变更）；#33 房间授权、#35 users.json 保护待做；认识机制后续：#53（`/map/travel`、`/map/tick` 响应 events 未脱敏）、#54（`/scenarios` 无条件下发 NPC 档案）；旧房间无 `knows_name` 需重认识（不迁移） |
+| 主分支 | `main`（sha 见 `git rev-parse --short main`；PR #4/#5、PR #9–#13（`v0.5.0`）、PR #22–#24（`v0.5.1` @ `42690c9`）、PR #43–#45（`v0.5.2`）、PR #50（Turn 幂等 `2c51028`，`v0.5.3`）、PR #52（NPC 认识与名字解锁 `f328bc3`，`v0.5.4`）、PR #55（地图出站脱敏 `4c85797`）、PR #56（档案下发收窄 `2547d73`）、PR #71（回滚未授权合并 `8784b3b` → `35e0c57`）、PR #72（简易用户系统/房间授权 3.5.0 `840e9c5`）、PR #51（dev/v2 群聊+微信引擎 3.6.0，merge `02a3318`）依次合入） |
+| `CONTRACT_VERSION` | **3.6.0（main 顶点）**（3.2.0 minor：只增端点/类型/可选字段；3.2.1 patch：三条 issue 修复；3.3.0 minor：房间 404 拒绝路径 + tick 单批原子 + 记忆内部修复，新增 `E_ROOM_NOT_FOUND`；3.4.0 minor：NPC 认识/名字解锁（`TurnRequest.targetNpcId?`、`knows_name`、占位名视图、`/state`+`/history` 脱敏）；3.4.1 patch：#53 地图出站脱敏 + #54 档案下发收窄（派生视图，不进 schema）；**3.5.0 minor：简易用户系统/管理端点/额度与行动核对 + 房间授权 gate（#33，main，PR #72）**；**3.6.0 minor（PR #51）：群聊对话引擎 + NPC 微信私信/八卦传播 + `msg.send` 第 13 原语；已合入 main**；`SCHEMA_VERSION 2`，`API_VERSION 3`，`WORLD_MEM_VERSION 1`） |
+| `PROMPT_VERSION` | **v1 2026-11-18.1**（S1 增「只有在场者能说话/行动」；多 NPC 记忆按人分段）；**v2 两条独立线：`CONVERSATION_PROMPT_VERSION 2026-11-19.2`（群聊）/ `GOSSIP_PROMPT_VERSION 2026-11-19.1`（微信八卦）** |
+| 测试 | **72 文件 / 536 用例全过**；`check:contract` **8 项全过**（3.6.0，错误码 39/39）；`typecheck` 0 错；`build:web` 295.53 kB / gzip 94.57 kB |
+| 已具备 | M0 骨架、地图模块（旅行/场景/草案双审）、引擎 3.0.0（原子结算 + 持久化闭环）、内容审核层、现实锚定层、前端体验与运行时模型接入、记忆子系统 3.1.0（P0–P4）、地图交互打磨 + 图鉴 registry 收口（PR #5）、**图鉴 GalleryView/scenarios 数据化（PR #12）、存档索引/回合历史/会话恢复 MVP（PR #13）、store 鲁棒性（PR #9）、整回合预算显式化（PR #11）、文档职责整理（PR #10）、多 NPC 各自记忆注入与工作记忆滚动（PR #24）、LLM 格式容错/自动重问（PR #23）、点不在场 NPC 隔离与可重试错误重试（PR #22）、房间入口 404 守卫 + tick 单批原子（PR #44）、部署一致性边界文档（PR #43）、记忆可信边界/repair 补写/compact 接线（PR #45）、Turn 幂等（同 `clientTurnId` 只结算一次，进程内；PR #50）、NPC 认识与名字解锁（陌生人占位名/问名字解锁/图鉴同步；PR #52）、地图出站脱敏（#53，PR #55）、`/scenarios` 公开字段收窄与气泡档案门控（#54，PR #56）、**群聊对话引擎（四段说话/三通道投递/每 NPC 独立 LLM/场景总结/扩面审核；PR #51）、NPC 微信私信与八卦传播（`msg.send` 第 13 原语 + `TalkBudget` + SSE；PR #51）** |
+| 下一步 | M1：单房单 NPC 完整玩法、夜间 tick/密谋编排；M2 模块宿主验收（`study` 只加目录）；issue #3 余项：`/state` 原始 attrs 过滤 + `self` 看自己口径；存档 MVP 后续：多槽/导出/跨设备、历史一次 200 行上限；PR #19 的修复版 **PR #72**（简易用户系统/房间授权）已合入 main（`840e9c5`）；**PR #51**（dev/v2 群聊/微信引擎）已合入 main（merge `02a3318`），适配待办见 **issues #85–#92**（前端 #85–#87、模块 #88、后端 #89–#90、运维 #91、内容 #92）；后续：roomGate 存在性缓存、compact 非事件持久化的已知限制、Turn 幂等跨重启持久化（需 EventLog 变更）；#33 房间授权、#35 users.json 保护待做；认识机制后续：#53（`/map/travel`、`/map/tick` 响应 events 未脱敏）、#54（`/scenarios` 无条件下发 NPC 档案）；旧房间无 `knows_name` 需重认识（不迁移） |
 | 已知遗留 | 见 §3.3（均为 MINOR，不阻断当前 main） |
 
 ---
@@ -141,6 +141,9 @@
 | `2547d73` | PR #56 squash：`/scenarios` 只下发 `id`/`appearance`；`mutter` 改由 `/gallery` 且 met=true 下发；web 气泡从图鉴取（5 条测试） |
 | 本提交（`v0.5.4`） | release：`CONTRACT_VERSION 3.4.0 → 3.4.1`；CHANGELOG v0.5.4 定稿；docs/03 §10.19；MEMORY 同步 |
 
+| `840e9c5` | PR #72 squash：简易用户系统 + 房间授权/行动额度（CONTRACT 3.5.0；72 文件 536 用例） |
+| `02a3318` | PR #51 merge：dev/v2 群聊对话 + 微信/八卦引擎（merge commit，非 squash；CONTRACT 3.6.0，13 op；72 文件 536 用例） |
+
 ### 3.3 已知遗留（MINOR，均有记录；按需修）
 
 - **地图**（来自 `map-review.md` M1–M12）：`createDraft` 无鉴权 + draft id 32 位无碰撞检查；save 先改缓存后写盘（写盘失败假成功）；冷启动并发丢更新；tick 先推时间后校验移动（失败时时间已前进）；崩溃遗留 `generating` 无恢复；文件超 300 行（`map.ts` 575 等）；部分测试断言文案/fixture 偏差；docs 版本/坐标范围历史残留；app 层硬编码 map 数据路径；admin token 存 localStorage（已文档明示）。地图 v0.2：NPC 同点偏移 34 世界像素在 fit 缩放下屏幕差约 5px（视觉余量小、无测试）；偏移只读展示，不写状态。
@@ -160,6 +163,35 @@
 
 > 格式：`- 日期 ｜ 分支 ｜ 提交 ｜ 类型 ｜ 改了什么 ｜ 决策与理由 ｜ 验证 ｜ 遗留`
 
+### dev/v2（第二版架构试验，长期分支）
+- 2026-11-19 ｜ `dev/v2` ｜ `02a3318` ｜ merge ｜ 本分支合入 main（merge commit `02a3318`，未 squash；父 `b0b3944` + `840e9c5`）：群聊对话引擎 + NPC 微信/八卦（`msg.send` 第 13 原语，CONTRACT 3.5.0→3.6.0） ｜ 保留逐轮审阅历史，按 PR 描述约定用 merge commit；main 未被本分支直接改写 ｜ tsc 0 / 72 文件 536 例 / check:contract 8/8（3.6.0） ｜ 分支保留未删除；后续适配 issues #85–#92
+- 2026-11-19 ｜ `dev/v2` ｜ `9027fd9` ｜ docs(review) ｜ 纠正前端文档的发信节流口径：`TalkBudget` 只节流 NPC 自主发言路径，`GossipHost.send()` 不碰 budget，玩家连发不会被 min-interval 拦；明确要求前端对发送按钮防抖，NPC 调用仍有 maxNpcCallsPerTick 兜底；删掉不存在的「回合限流」措辞 ｜ 选改文案而非补实现：发信便宜、NPC 波次预算已封顶，防抖属前端职责 ｜ tsc 0 / 72 文件 536 例 / check:contract 8/8（3.6.0）｜ 无遗留
+- 2026-11-19 ｜ `dev/v2` ｜ `945cabc` ｜ docs(review) ｜ main PR #72 合入 dev/v2 后（f9ea1ec，72 文件 536 例全过）的 3 条 P3：前端文档写明「微信不扣 TurnLedger 行动额度、由 TalkBudget 独立节流」是有意设计；README 12→13 op 闭集并标 3.6.0；CHANGELOG 版本链补 dev/v2 3.6.0 预览；PR 描述补「合 main 用 merge commit、不 squash」建议 ｜ 审阅通过无阻断，纯文档/口径 ｜ tsc 0 / 72 文件 536 例 / check:contract 8/8（3.6.0）｜ 无遗留；合 main 仍等用户明确指令
+- 2026-11-19 ｜ `dev/v2` ｜ `7be6716` ｜ fix(review) ｜ 最终审阅 3 条 P3：PR 描述与 `docs/v2/前端开发注意事项.md` 顶部标 breaking（`/events` 他人 actorId 403）、删 MessageIndex 无调用方 `count()`、`markStale` 注释 TTL 到期一次性重复上报须 SSE 按 id 去重 ｜ 审阅者判通过且阻断清零，这些都是注释/清理级 ｜ tsc 0 / 70 文件 488 例 / check:contract 8/8（3.6.0）｜ 无遗留
+- 2026-11-19 ｜ `dev/v2` ｜ `dd3acb1` ｜ fix(review) ｜ 全量审计 P1：`GET /events` 把 `?actorId=` 交给 `guardRoom({actorId})` 绑定账号，别人 actorId 现在 403（此前能读全部私信正文）；补路由用例；AGENTS.md 铁律5/速查 12→13 原语含 msg.send；op.schema.json 描述改 13；前端文档补 `/events?actorId=` 一行；staleSeen 改 TTL+256 自清理（原空闲清理条件不可达），`clearRoom()` 注明仅限房间销毁；npc-agent 悬空 JSDoc 清理 ｜ 逐轮增量修复漏掉的整体性鉴权分支，必须全量审一遍才抓到 ｜ tsc 0 / 70 文件 488 例 / check:contract 8/8（3.6.0）｜ 无阻断遗留
+- 2026-11-19 ｜ `dev/v2` ｜ `4def20d` ｜ fix(review) ｜ 十二审 P2/P3：`V2_PROMPT_VERSION` 拆成 shared 中两个契约常量 `CONVERSATION_PROMPT_VERSION 2026-11-19.2` / `GOSSIP_PROMPT_VERSION 2026-11-19.1`，npc-agent 从 shared 引入、本地同名导出删除；会话提示词静态段已变，版本顺延；`GossipHost.clearRoom()` 显式清理 + 空闲波次自动清 staleSeen（仅当无订阅且无消息），MessageIndex 加 `count()`；前端文档 API_VERSION 2→3 并区分两条版本线 ｜ 同名双值从两个 export * 出口泄漏是契约级隐患，必须在合并前拆开 ｜ tsc 0 / 70 文件 488 例 / check:contract 8/8（3.6.0）｜ 无阻断遗留
+- 2026-11-19 ｜ `dev/v2` ｜ `a8f9da1` ｜ fix(review) ｜ 十一审 P3：beginTick 移到幂等命中/会话校验之后（重放不清他 host 预算）、过期未读消息每房只上报一次 `gossip.dropped(idle-timeout)`（有界 256）、方案验证数 70/488 与 v2 7/57、补 `playerPresentGraceMs` 迁移说明（旧键被 partial() 静默忽略）｜ 审阅已判通过，剩余均为合并前可选优化，一次清完 ｜ tsc 0 / 70 文件 488 例 / check:contract 8/8（3.6.0）｜ 无阻断遗留
+- 2026-11-19 ｜ `dev/v2` ｜ `d2422ed` ｜ fix(review) ｜ 十审剩余 4 条：MEMORY 失真（本提交→`ac264c8`、删掉不存在的 `beginTick` 宣称后又真接上）、`E_AUDIT_UNAVAILABLE` 登记进 shared `ERROR_CODES` 与 docs/03 §7、`playerAbsentGraceMs`→`playerPresentGraceMs`（命名与行为一致）、`idleTimeoutMs` 弃置未读产出 `gossip.dropped(idle-timeout)` 事件、方案「已知偏差」更新为已接线现状 ｜ 记账反复失真，这次先核对代码再写说明 ｜ tsc 0 / 70 文件 487 例 / check:contract 8/8（3.6.0）｜ 无阻断遗留
+- 2026-11-19 ｜ `dev/v2` ｜ `c1e3286` ｜ fix(review) ｜ PR #51 十审后 P1 全修：reply 带 rootId 放行、TalkBudget 按波次重置、私信端点鉴权与 /events 按 audience 过滤、微信内容过审、API_VERSION 3 口径统一；+4 用例 ｜ P1 阻断必须清零 ｜ tsc 0 / 70 文件 486 例 / check:contract 8/8（3.6.0）｜ review 通过，建议下轮清 P2/P3
+- 2026-11-19 ｜ `dev/v2` ｜ `ac264c8` ｜ fix(review) ｜ 清十审 P2/P3：hop 随源递增且 maxHops 生效、玩家发信入库前审核、波次审核只审 NPC 内容、`idleTimeoutMs`/`playerPresentGraceMs`/`maxTurnsPerTick`/`nextEligible` 真消费、策略缺文件可读报错、路由测试 env 还原、apiVersion 与 op 数文档残留与 3.6.0 变更条目、方案标题 ｜ 审阅建议一次性清完，避免口径反复 ｜ tsc 0 / 70 文件 487 例 / check:contract 8/8（3.6.0）｜ 无阻断遗留
+- 微信私信引擎（`3.6.0`，已提交 `0a862d9` + `200bdd8` 并 push）：新增 13th op `msg.send` + `Envelope.audience` + `MessageIndex` + `TalkBudget` + `GossipHost/GossipAgent` + `dm` 模式 + gossip 记忆可信通道；`msg.send` 只有目标与内容，玩家非收件人零可见；预算在 LLM 调用前消费；server 已接 `/messages` 收件箱/发送/SSE（按收发双方过滤）+ `GALGAME_GOSSIP_SCAN_MS` 后台波次；前端交互由前端同学按 `docs/v2/前端开发注意事项.md` 实现。
+- 2026-11-18 ｜ `dev/v2` ｜ `410d8bc` ｜ fix(review) ｜ PR #51 九审 P3 收尾：协议规则文本明确为引擎常量（与校验强绑定、不入 policy），新增 `V2_PROMPT_VERSION = "2026-11-18.1"` 写入静态协议首行追踪 KV 前缀 ｜ 九审通过，唯一剩余为提示词数据化/版本口径，按建议②处理 ｜ tsc 0 / 44 文件 327 例 / v2 44 例 / check:contract 8/8 ｜ PR #51 全部审阅项闭环，已具备合并评估条件（未合并）
+- 2026-11-18 ｜ `dev/v2` ｜ `6ed3e63` ｜ fix(review) ｜ PR #51 八审 P3 收尾：提示词规则明确「一个在场目标（字符串，非数组/@all）」与校验对齐；架构文档历史小节加注 singleTarget 已删除 ｜ 八审通过，剩余仅体验/口径优化，一次清完 ｜ tsc 0 / 44 文件 327 例 / v2 44 例 / check:contract 8/8 ｜ PR #51 已具备合并评估条件（按用户要求不合并）
+- 2026-11-18 ｜ `dev/v2` ｜ `54b8d2c` ｜ fix(review) ｜ PR #51 七审收尾：按行内证据真改二审条目「本提交」→ `be657ad`；删除死字段 `singleTarget`（契约/ModeSchema/两份 JSON/提示词/校验分支），目标形态统一由 `requiresTarget` 表达 ｜ 同一记账问题被指出三次，这次直接核对行内容后再写说明 ｜ tsc 0 / 44 文件 327 例 / v2 44 例 / check:contract 8/8 ｜ 无阻断遗留
+- 2026-11-18 ｜ `dev/v2` ｜ `8335ac8` ｜ fix(review) ｜ PR #51 六审 P3 收尾：`requiresTarget` 统一只接受字符串单目标（数组与 @all 全拒，多目标走 broadcast）；MEMORY 验证数 323→324、二审占位「本提交」→ `be657ad`；+1 回归用例 ｜ 六审已判通过，剩余记账与口径细节一并清完 ｜ tsc 0 / 44 文件 327 例 / v2 44 例 / check:contract 8/8 ｜ 无阻断遗留
+- 2026-11-18 ｜ `dev/v2` ｜ `89449f5` ｜ fix(review) ｜ PR #51 五审 P3 收尾：`requiresTarget` 拒绝空数组目标、flush 重试用失败前 lastLocId 守卫 + 当前快照前移地点、trimSessions 补回归测试、MEMORY 短 sha 订正 ｜ 五审已判通过，剩余 P3 一并清完 ｜ tsc 0 / 44 文件 326 例 / v2 43 例 / check:contract 8/8 ｜ 无阻断遗留
+- 2026-11-18 ｜ `dev/v2` ｜ `932278f` ｜ refactor ｜ PR #51 四审通过；`runStep` 拆为 8 个私有步骤（单函数 7–33 行）｜ 审阅建议与 AGENTS.md §6 对齐 ｜ tsc 0 / 44 文件 322 例 / check:contract 8/8 ｜ 无阻断遗留
+- 2026-11-18 ｜ `dev/v2` ｜ `2c0d37e` ｜ fix(review) ｜ PR #51 四审 P3 卫生：`singleTarget` 拒绝数组目标、`requiresTarget` 拒绝 `@all`（`@all` 统一走 broadcast）、flush 重试前移 lastLocId、trimSessions 跳过 pendingFlush、错误文案数据化 ｜ 四审已判通过，剩余 P3 仍按用户「修」逐条清 ｜ tsc 0；44 文件 324 例 / v2 41 例 / check:contract 8/8 ｜ 五审通过，无阻断遗留
+- 2026-11-18 ｜ `dev/v2` ｜ `be657ad` ｜ fix(review) ｜ PR #51 **二审**修复：A 换地点唤醒真修（`SceneBeat.locId` + `lastLocId`）；B flush 重试不回放旧错误；C recent/顺序修正；D 删实体前缀硬编码按 kind 判定；E autonomous 开关消费；F 房间级串行链消除 seq 竞态；G 无提案也发 committed；H resumeExpiredEvents 带 phase；K conversation.ts 缩到 ~210 行（拆 conversation.step.ts）；L 中文文案/LLM 参数进 JSON；M utterance id 用 turnKey 可回放；N addressed requiresTarget + @all 放行；O sessions/pending/seen 有界 256 ｜ 首轮文档把未接的换地点写成已实现，故二审按证据真修而非再改文档；v1 仍不动，保持纯加法 ｜ 本地 v2 5 文件 36 例；全量验证见提交说明 ｜ 遗留：v2 契约未进 docs/03（架构文档已记边界）；npc.spoke 仍未生成；server/web 未接线；地图 move.to 未写 scene.changed
+- 2026-11-18 ｜ `dev/v2` ｜ `92e8a1c` ｜ fix(review) ｜ PR #51 首轮 review 6 P1 + P2 修复：审核扩面接线与假 AuditPort 12 例（玩家拦截/NPC 丢弃/审核故障/六字段拼接）、`listenSince` + `resumeExpired()` 消费 `listenTimeoutMs`、flush 失败 `E_STORE_FAULT retryable` 且不写幂等且可安全重试、`RawDecisionSchema` zod 边界、mode 改为 JSON 的 `requiresTarget/contentless/visibility/defaultMode` 数据驱动（缺省 fail-closed）、幂等键带 speaker 且 seen≤256；补 addressed notice / atomic 回滚 / LLM 抛异常用例；订正适配度报告行号与架构文档 secret/出口表述 ｜ 审阅判定"接线前必须清零"，故本轮全部按证据修而非只补文档；缺省 mode 不再回落 broadcast 是隐私 fail-open 的直接修复 ｜ tsc 0；44 文件 315 用例；check:contract 8/8（3.3.0） ｜ 未做：`npc.spoke` 领域事件仍未生成（无对应写 op，已记架构文档偏差）、conversation.ts 360 行超 AGENTS 300 行建议、server/web 仍未接线
+- 2026-11-18 ｜ `dev/v2` ｜ `51f2495` ｜ fix(review) ｜ PR#51 三审修复：私密模式 `singleTarget` 与隐私口子、policy 深合并、提示词/文案数据化、lastLocId 前移、chains 清理与 +3 回归测试 ｜ 三审两项 P2 必修，按证据实修 ｜ tsc 0 / 322 例 / check:contract 8/8 ｜ 函数拆分留待下轮
+
+- 2026-11-18 ｜ `dev/v2` ｜ `59078d9`（基线 `cda0823` / `v0.5.3` / CONTRACT 3.3.0） ｜ feat ｜ 从 main 拉出长期架构试验分支，仅记录基线，未改任何架构/契约/代码 ｜ 用户要求"在现在项目的基础上分支一个版本试开发第二版架构"；v2 属于整体架构换代（不变量 I1/I2/I3、12 op 闭集都可重新评估），故以 main 为基线而非未合并 PR 分支；记忆子系统已随 PR #4 squash 进入 main，基线是完整当前形态 ｜ 起点校验：本地与 origin/main 均为 `cda0823`（0/0 无分叉）、工作区干净；未修改代码，验证沿用 main 的 tsc 0 / 39 文件 283 用例 / check:contract 8 项（3.3.0） ｜ 待 owner 明确 v2 的验证目标：engine 闭盒与 12 op 闭集是否仍为不可触碰的边界；main 保持不动，定期把 main merge 进 dev/v2；成了发 PR 回 main，废了直接删分支
+
+- 2026-11-18 ｜ `dev/v2` ｜ `374d5a1` ｜ review ｜ 首轮审阅结论：**有条件通过**（无阻断项）。`git diff main...dev/v2` 18 文件 +1832/-1，全为加法，v1/12 op/契约版本未动。P1×6：①审核扩面零测试却称"由会话 e2e 覆盖"（4 份测试全用 NoopAudit，blocked/unavailable/NPC 丢弃三分支从未执行）；②`listenTimeoutMs` 死配置（契约/JSON/文档/前端清单四处声明，引擎零消费，§10 偏差漏记，插话后 phase 永久 listening）；③`store.flush` 异常被 `run()` 兜成 E_MODULE_FAULT 并写入幂等缓存，同 key 重试永久回放错误且状态已变；④LLM 输出未 zod 解析（`parseDecision` 为 `JSON.parse + as RawDecision`），`coverAction`/`target` 未校验可致悄悄话内容外泄；⑤mode id 硬编码（`delivery.ts:72,91`、`npc-agent.ts:149`、`conversation.ts:308`）与文件头"引擎不写死模式"注释自相矛盾，新增私密模式只改 JSON 不生效，缺省 mode 回落 `broadcast` 属隐私 fail-open；⑥幂等键 `[sessionId, clientTurnId]` 丢 actorId 且 `seen` 无上限（v1 #34 已修为 `[roomId, actorId, clientTurnId]`）。P2×10：文档行号多处错（`:192`→:160、`:264-270` 不含 apply→:257、punish 定义 :78≠:154）、secret 信封机制说明错（实际 cause `dialogue.speak`）、"两个 index.ts 各加一行"不实、审核空字段过滤阈值失效、policy 两字段被 zod strip、测试缺 addressed notice/atomic 回滚/LLM 抛错、`delivery.ts:141` 中文兜底进引擎、`conversation.ts` 318 行>300、`createInitialState` 未用、NPC 发言未发 `npc.spoke` 事件 ｜ 依据本地 diff（GitHub token 失效且 7890 代理未开）+ 两个只读 subagent 交叉审阅 ｜ 验证：typecheck 0 错 / `npm test` 43 文件 303 用例全过 / check:contract 8 项（3.3.0） ｜ 遗留：修 P1 后复审（已按 §11.3 用短 sha 订正旧条目）
+
+- 2026-11-18 ｜ `dev/v2` ｜ `1187554` ｜ feat ｜ 群聊对话模型阶段 1–5 落盘：`packages/shared/src/contract/v2.ts`（Utterance 四段结构 / content·action·notice 三通道 / ConversationEvent / 策略）、`content/v2/{utterance-modes,conversation-policy}.json`；`packages/engine/src/v2/{delivery,scene,npc-agent,audit,conversation,index}.ts` + 4 份测试（20 例）。每个 NPC 各自一次 LLM（并行、上下文隔离）、插话 phase、NPC 自主续聊 + 硬上限、心理活动带 plan 走 secret、审核扩面六字段、所有写仍走一次 atomic Arbiter.apply 并写后 ingest ｜ 用户拍板"改引擎没问题，但尽量缩小对其他模块影响"；v2 全部是加法文件，v1 的 Turn/Dialogue/Transport/12 op/契约版本均未改；心理活动允许 plan 是用户推翻我原先"禁止计划"建议后的定版 ｜ tsc 0；v2 单测 4 文件 20 例全过；check:contract 8/8（3.3.0） ｜ 偏差记在 docs/v2/群聊对话架构.md §10（换地点唤醒未接、S1.5 注入未进 v1 prompt、queue 未用、会话仅内存）；前端改动记 docs/v2/前端影响清单.md
+
 ### fix/map-bubble-refresh（issue #57，PR 待开）
 
 - 2026-11-18 ｜ `fix/map-bubble-refresh` ｜ `48ce5fe` ｜ fix ｜ App 把 `stateRev` 作为 `version` 传给 ChatPanel → CampusMap；gallery effect 依赖改为 `[roomId, version]`，解锁 NPC 后同房间重拉即出气泡，无需重挂载；抽 `nextBubbleState` 纯函数（换房间立即清空、同房间重拉/失败保留上次成功值、成功只取 met 且有 mutter），新增 8 条 web 用例 ｜ 与 GalleryPanel 的 `version={stateRev}` 口径一致，最小改动复用既有刷新信号；换房间清空防串房，失败保留避免永久空表/闪烁；web vitest 是 node 环境无 jsdom，故用纯函数单测 + effect 依赖结构断言，未加新依赖；不 bump ｜ tsc 0；48 文件/328 用例通过（基线 47/320）；check:contract 8 项（3.4.1）；与 PR #58 集成 49 文件/332 用例全绿，build:web 成功 ｜ 未认识/图鉴失败仍不出气泡（不回归 #54）；#33/#35 按用户指示忽略
@@ -176,6 +208,10 @@
 - 2026-11-18 ｜ `fix/turn-idempotency-only` ｜ squash `2c51028` ｜ merge ｜ PR #50 squash 合入 main（39 文件/283 用例）；复审通过，P2 记录：失败路径 waiter 竞态、waiter 无超时、跨重启不幂等仅注释 ｜ issue #34 关闭 ｜ — ｜ 无
 
 ### main
+
+- 2026-11-19 ｜ main ｜ `02a3318` ｜ merge（PR #51） ｜ dev/v2 群聊对话 + 微信/八卦引擎合入 main（merge commit，非 squash）：四段说话/三通道投递/每 NPC 独立 LLM、场景总结、审核扩面、`msg.send` 第 13 原语 + 微信私信/八卦、SSE；CONTRACT 3.5.0 → 3.6.0；CHANGELOG/README 已补 minor 说明 ｜ 用户明确指令「合并！」；PR #51 十六轮审阅全部通过，鉴权与 PR #72 对齐 ｜ tsc 0；72 文件/536 用例；check:contract 8/8（3.6.0）；build 295.53 kB / gzip 94.57 kB ｜ 前端/后端适配待办 issues #85–#92
+- 2026-11-19 ｜ main ｜ `19d0dd1` ｜ docs ｜ 新增 `docs/v2/前端适配更新指南.md`、`docs/v2/后端模块适配更新指南.md`（3.6.0 合入后的对外面、渲染/迁移规则、验收清单） ｜ 合入后前端与模块作者需要可照做的迁移说明，不能只靠 PR 审阅记录 ｜ docs-only；tsc 0 / 72 文件 536 例 / check:contract 8/8（3.6.0） ｜ 待前端/模块按 issues #85–#92 落地
+- 2026-11-19 ｜ main ｜ 本提交 ｜ docs ｜ MEMORY 合并记账 + §0 快照刷新（main 顶点 `02a3318`、3.6.0、72/536、错误码 39）与适配指南/待办入口 ｜ 按 AGENTS §11.5 合并者必须补 merge 条目与快照 ｜ 与上条同批验证 ｜ 无
 
 - 2026-11-18 ｜ main ｜ `35e0c57` ｜ merge ｜ 合并 PR #71（`revert/pr19-merge`，revert commit `cbf84f1`）：撤销 PR #19 未经复审的合并 `8784b3b`，main 回到 CONTRACT 3.4.1；修复版改由 PR #72 重新提交 ｜ 复审（ddyyxx-jpg 2026-11-18 14:49）明确要求先回滚再重提，用户「是的，回滚吧」授权 ｜ typecheck 0；49 文件/332 用例；check:contract 8/8（3.4.1） ｜ PR #72 待复审
 

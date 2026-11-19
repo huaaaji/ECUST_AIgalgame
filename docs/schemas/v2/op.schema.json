@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://galgame.local/schemas/v2/op.schema.json",
   "title": "Op 原语（Proposal）",
-  "description": "Arbiter 唯一接受的 12 个状态变更原语（闭集），模块/导演/记忆层只能产出这些 Proposal，由 Arbiter.apply 校验后落库并写事件日志（03 §2.3 Proposal、03 §3）。本文件是 packages/shared/src/contract/types.ts 与 packages/shared/src/zod/op.ts 的 JSON Schema 镜像，字段名、可选性、枚举值以它们为准；新增原语必须 bump apiVersion。",
+  "description": "Arbiter 唯一接受的 13 个状态变更原语（闭集），模块/导演/记忆层只能产出这些 Proposal，由 Arbiter.apply 校验后落库并写事件日志（03 §2.3 Proposal、03 §3）。本文件是 packages/shared/src/contract/types.ts 与 packages/shared/src/zod/op.ts 的 JSON Schema 镜像，字段名、可选性、枚举值以它们为准；新增原语必须 bump apiVersion。",
   "$comment": "参数真源是 packages/shared/src/contract/types.ts 的 XxxArgs 与 packages/shared/src/zod/op.ts 的 XxxArgsSchema；本文件只做形状与枚举镜像，可解析性由 `npm run check:contract` 校验。数值钳制、邻接判定、canon 锁定等语义裁决属于 Arbiter，不在这里表达。",
   "$defs": {
     "id": {
@@ -1046,7 +1046,39 @@
           "by": "npc.director"
         }
       ]
+    },
+    {
+      "title": "msg.send — dev/v2 异步私信",
+      "description": "03 §3 op 13：微信私信只有目标与内容；产出 msg.sent，Envelope.audience=[from,to] 在 Transport 前过滤。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["op", "args"],
+      "properties": {
+        "op": { "const": "msg.send" },
+        "args": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["from", "to", "kind", "content"],
+          "properties": {
+            "from": { "type": "string", "minLength": 1 },
+            "to": { "type": "string", "minLength": 1 },
+            "kind": { "enum": ["gossip", "reply", "player", "system"] },
+            "content": { "type": "string", "minLength": 1, "maxLength": 400 },
+            "rootId": { "type": "string" },
+            "replyTo": { "type": "string" },
+            "hop": { "type": "integer", "minimum": 0, "maximum": 12 },
+            "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+            "visibility": { "const": "private" }
+          }
+        },
+        "reason": { "type": "string" },
+        "by": { "type": "string" }
+      },
+      "examples": [
+        { "op": "msg.send", "args": { "from": "npc_wangwu", "to": "npc_zhangsan", "kind": "gossip", "content": "听说他昨晚去了图书馆", "hop": 1, "confidence": 0.8 }, "reason": "传播八卦", "by": "gossip.spread" }
+      ]
     }
+
   ],
   "examples": [
     {

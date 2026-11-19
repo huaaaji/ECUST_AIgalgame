@@ -2,7 +2,7 @@
   "id": "introduce",
   "name": "自我介绍",
   "version": "0.1.0",
-  "apiVersion": 2,
+  "apiVersion": 3,
   "dependsOn": [],
   "capabilities": {
     "intents": ["introduce.self"],

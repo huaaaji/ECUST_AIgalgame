@@ -35,7 +35,7 @@ const sameSet = (a: Set<string>, b: Set<string>): boolean => a.size === b.size &
   }
 }
 
-// ---------------------------------------------------------------- 2 op 名（12 个闭集）
+// ---------------------------------------------------------------- 2 op 名（13 个闭集）
 {
   const start = doc.indexOf("## 3. Op 原语");
   const rest = start === -1 ? "" : doc.slice(start + 1);
@@ -50,10 +50,10 @@ const sameSet = (a: Set<string>, b: Set<string>): boolean => a.size === b.size &
       "op-names",
       `docs 独有=[${onlyIn(docOps, codeOps).join(",")}] code 独有=[${onlyIn(codeOps, docOps).join(",")}]`,
     );
-  } else if (docOps.size !== 12) {
-    fail("op-names", `03 §3 声明了 ${docOps.size} 个 op，闭集必须是 12 个`);
+  } else if (docOps.size !== 13) {
+    fail("op-names", `03 §3 声明了 ${docOps.size} 个 op，闭集必须是 13 个`);
   } else {
-    ok("op-names", `12/12 一致：${[...docOps].join(", ")}`);
+    ok("op-names", `13/13 一致：${[...docOps].join(", ")}`);
   }
 }
 
@@ -110,10 +110,10 @@ const sameSet = (a: Set<string>, b: Set<string>): boolean => a.size === b.size &
           "op-schema",
           `分支与 OP_NAMES 不一致：schema 独有=[${onlyIn(branchOps, new Set<string>(OP_NAMES)).join(",")}] code 独有=[${onlyIn(new Set<string>(OP_NAMES), branchOps).join(",")}]`,
         );
-      } else if (branchOps.size !== 12) {
-        fail("op-schema", `op.schema.json 的 op 分支数为 ${branchOps.size}，应为 12`);
+      } else if (branchOps.size !== 13) {
+        fail("op-schema", `op.schema.json 的 op 分支数为 ${branchOps.size}，应为 13`);
       } else {
-        ok("op-schema", `12 个分支覆盖 12 个 op：${[...branchOps].join(", ")}`);
+        ok("op-schema", `13 个分支覆盖 13 个 op：${[...branchOps].join(", ")}`);
       }
     }
   }

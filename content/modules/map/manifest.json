@@ -2,7 +2,7 @@
   "id": "map",
   "name": "校园地图",
   "version": "0.1.0",
-  "apiVersion": 2,
+  "apiVersion": 3,
   "description": "给地点与 NPC 坐标、地图选点移动、场景描述/链接/固定 NPC/场景对话，以及 NPC 日程移动。",
   "dependsOn": [],
   "capabilities": {

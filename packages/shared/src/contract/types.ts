@@ -180,7 +180,7 @@ export interface Registry {
   reload(): Promise<void>;
 }
 
-// ---------------------------------------------------------------- op 原语（闭集 12 个）
+// ---------------------------------------------------------------- op 原语（闭集 13 个；dev/v2 增 msg.send）
 export type OpName =
   | "attr.delta"
   | "attr.set"
@@ -193,7 +193,8 @@ export type OpName =
   | "time.advance"
   | "scene.set"
   | "memory.write"
-  | "plot.upsert";
+  | "plot.upsert"
+  | "msg.send";
 
 export const OP_NAMES: readonly OpName[] = [
   "attr.delta",
@@ -208,6 +209,7 @@ export const OP_NAMES: readonly OpName[] = [
   "scene.set",
   "memory.write",
   "plot.upsert",
+  "msg.send",
 ] as const;
 
 export interface AttrDeltaArgs {
@@ -289,6 +291,19 @@ export interface MemoryWriteArgs {
   supersedes?: Id;
   aboutUserIds?: Id[];
 }
+/** dev/v2 微信私信：只有目标与内容，没有 action/notice 通道 */
+export interface MsgSendArgs {
+  from: ActorId;
+  to: ActorId;
+  kind: "gossip" | "reply" | "player" | "system";
+  content: string;
+  rootId?: Id;
+  replyTo?: Id;
+  hop?: number;
+  confidence?: number;
+  visibility?: "private";
+}
+
 export interface PlotUpsertArgs {
   id?: Id;
   goal: string;
@@ -422,7 +437,7 @@ export interface ModuleManifest {
   id: ModuleId;
   name: string;
   version: string;
-  apiVersion: 2;
+  apiVersion: 3;
   dependsOn?: ModuleId[];
   capabilities?: Capabilities;
   priority: number;

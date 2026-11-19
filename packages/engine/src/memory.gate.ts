@@ -74,6 +74,8 @@ export interface MemoryGateInput {
   recent: readonly MemoryRecord[];
   /** 同 owner 在本 room 已有的条数（配额用） */
   ownedCount: number;
+  /** 引擎内部可信通道（gossip.spread）：收件人常不在场，凭 sourceRefs 跳过 G1 在场检查 */
+  trustedChannel?: "gossip";
   limits?: Partial<MemoryGateLimits>;
 }
 
@@ -169,13 +171,16 @@ export function applyMemoryGates(input: MemoryGateInput): MemoryGateResult {
     const visibility = raw.visibility ?? "private";
 
     // ---------- G1 归属 ----------
-    if (!present.has(input.ownerId)) {
-      dropped.push({ reason: "owner_absent", detail: `${input.ownerId} 不在场，不该记得这一刻` });
-      continue;
-    }
-    if (about.some((id) => !present.has(id))) {
-      dropped.push({ reason: "about_absent", detail: "记忆里提到了不在场的人" });
-      continue;
+    const trustedGossip = input.trustedChannel === "gossip" && (raw.sourceRefs?.length ?? 0) > 0;
+    if (!trustedGossip) {
+      if (!present.has(input.ownerId)) {
+        dropped.push({ reason: "owner_absent", detail: `${input.ownerId} 不在场，不该记得这一刻` });
+        continue;
+      }
+      if (about.some((id) => !present.has(id))) {
+        dropped.push({ reason: "about_absent", detail: "记忆里提到了不在场的人" });
+        continue;
+      }
     }
 
     // ---------- G5 秘密（turn 只能写非秘密；秘密由导演/引擎代写） ----------

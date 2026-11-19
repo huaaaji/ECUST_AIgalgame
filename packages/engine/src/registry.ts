@@ -40,6 +40,7 @@ const OP_REQUIRES: Record<OpName, OpDef["requires"]> = {
   "scene.set": "none",
   "memory.write": "none",
   "plot.upsert": "plot",
+  "msg.send": "none",
 };
 
 const BUILTIN_OPS: OpDef[] = OP_NAMES.map((name) => ({ name, args: {}, requires: OP_REQUIRES[name] }));

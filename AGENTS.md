@@ -47,7 +47,7 @@
 | 2 | **不硬编码属性名**。要"体力"就 `ctx.state.attr(entityId, "stamina")`，不许 `player.stamina`。 | 这是"加变量不改引擎"的命门。 |
 | 3 | **不直接写数据库/文件**。产出 `Proposal[]`，交给 Arbiter（默认 atomic：一条被拒 → 整批不落库）。 | 绕过裁决 = 数值漂移、存档不可复现；部分成功 = 交易扣了钱没发货。 |
 | 4 | **模块不持有 LLM 客户端、不读环境变量里的 key**。需要生成就调 `ctx.llm`（可被 mock）。 | 否则成本与密钥失控、测试没法跑。 |
-| 5 | **不新增 op 原语**。12 个是闭集，新玩法只能用它们组合。真需要新增 → 停下来问人。 | 每次新增都是全系统回归。 |
+| 5 | **不新增 op 原语**。13 个是闭集（dev/v2 含 `msg.send`），新玩法只能用它们组合。真需要新增 → 停下来问人。 | 每次新增都是全系统回归。 |
 | 6 | **不为了让测试过而放宽契约**。契约改了要 bump 版本并同步文档。 | 兼容性是这个项目唯一的核心资产。 |
 | 7 | **测试断言 `Proposal`，不断言文案**。文案由 LLM 生成，永远不稳定。 | 断言文案的测试会在 CI 里随机红。 |
 | 8 | **不引入新依赖**除非用户明确同意。一个文本游戏不需要 20 个库。 | 你删不掉的技术债最后都归用户。 |
@@ -215,8 +215,8 @@ galgame/
 | 词 | 含义 |
 |---|---|
 | **Arbiter** | 裁决器，唯一写入口：校验 `Proposal` → 应用 → 写事件日志 |
-| **Proposal** | 状态变更提议 `{ op, args, reason }`，op 只能是 12 个原语之一 |
-| **Op 原语** | `attr.delta` / `attr.set` / `entity.create` / `entity.update` / `entity.tombstone` / `link.create` / `link.remove` / `move.to` / `time.advance` / `scene.set` / `memory.write` / `plot.upsert` |
+| **Proposal** | 状态变更提议 `{ op, args, reason }`，op 只能是 13 个原语之一（dev/v2 起含 `msg.send`） |
+| **Op 原语** | `attr.delta` / `attr.set` / `entity.create` / `entity.update` / `entity.tombstone` / `link.create` / `link.remove` / `move.to` / `time.advance` / `scene.set` / `memory.write` / `plot.upsert` / `msg.send` |
 | **Envelope** | 统一消息信封，所有跨系统消息都套它，带 `roomId/seq/type/payload` |
 | **Registry** | 数据注册表（属性/事件/意图/工具声明），引擎读它而不是写死 |
 | **Module** | 玩法插件（算数），只产出 Proposal |

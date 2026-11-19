@@ -61,7 +61,7 @@ export class ModuleHost implements Modules {
         const id = ent.name as ModuleId;
         this.infos.set(id, {
           id,
-          manifest: { id, name: ent.name, version: "0.0.0", apiVersion: 2 } as ModuleManifest,
+          manifest: { id, name: ent.name, version: "0.0.0", apiVersion: 3 } as ModuleManifest,
           loaded: false,
           fault: { code: "E_MODULE_LOAD", message: String(e), at: Date.now() },
         });

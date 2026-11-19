@@ -3,7 +3,8 @@
  * 不含业务规则；游戏层拒绝一律 HTTP 200 + {ok:false,code,message}，500 只表示未预期异常。
  */
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import type { Memory, MemoryRecord, Registry, Store, Turn, TurnEvent, WorldState } from "../../../packages/shared/src/contract/types.ts";
+import type { ActorId, Memory, MemoryRecord, Registry, RoomId, Store, Turn, TurnEvent, WorldState } from "../../../packages/shared/src/contract/types.ts";
+import type { GossipEvent, MessageDigest } from "../../../packages/shared/src/contract/v2.ts";
 import { DialogueBodySchema, TickBodySchema, TravelBodySchema, zodMessage } from "./map.data.ts";
 import type { MapService } from "./map.ts";
 import type { LlmSettings } from "./settings.ts";
@@ -72,6 +73,12 @@ export interface AppDeps {
   auth?: AuthService;
   /** 行动额度账本（收敛稿 B1）；缺省 = 不做额度结算（本地测试） */
   ledger?: TurnLedger;
+  /** dev/v2：微信私信宿主（未接线时不注册端点） */
+  gossip?: {
+    send(roomId: RoomId, from: ActorId, to: ActorId, content: string, opts?: { kind?: "player" | "system"; viewer?: ActorId }): Promise<GossipEvent[]>;
+    inbox(roomId: RoomId, to: ActorId): MessageDigest[];
+    subscribe(roomId: RoomId, viewer: ActorId, cb: (ev: GossipEvent) => void): () => void;
+  };
   /** 管理操作日志 */
   adminLog?: AdminLog;
   /** Cookie 写请求 CSRF 允许的 Origin（authRequired=1 时用） */
@@ -397,10 +404,69 @@ export function registerRoutes(app: FastifyInstance, deps: AppDeps): void {
   // 续玩/存档（issue #7）：独立区块，见 resume.routes.ts
   registerResumeRoutes(app, deps, { userIdOf, isWorldRoom, roomExists });
 
+  // ---------------------------------------------------------------- dev/v2 微信私信
+  if (deps.gossip) {
+    const gossip = deps.gossip;
+    app.get("/api/v1/rooms/:roomId/messages", async (req, reply) => {
+      const { roomId } = req.params as { roomId: string };
+      if (!(await roomGate(roomId, reply))) return reply;
+      const q = req.query as { actorId?: string };
+      const viewer = q.actorId;
+      if (!viewer) return reply.code(400).send({ ok: false, code: "E_SCHEMA_INVALID", message: "actorId 必填" });
+      const access = await guardRoom(req, reply, deps, roomId, userIdOf, { actorId: viewer });
+      if (!access) return reply;
+      // 收件箱只按 actorId 查；玩家不是收发任一方的消息不会出现在响应里
+      const messages = gossip.inbox(roomId, viewer);
+      return { ok: true, messages };
+    });
+
+    app.post("/api/v1/rooms/:roomId/messages", async (req, reply) => {
+      const { roomId } = req.params as { roomId: string };
+      if (!(await roomGate(roomId, reply))) return reply;
+      const body = (req.body ?? {}) as { from?: string; to?: string; content?: string; userId?: string };
+      if (!body.from || !body.to || !body.content) {
+        return reply.code(400).send({ ok: false, code: "E_SCHEMA_INVALID", message: "from/to/content 必填" });
+      }
+      const access = await guardRoom(req, reply, deps, roomId, userIdOf, { actorId: body.from, body: { userId: body.userId } });
+      if (!access) return reply;
+      const events = await gossip.send(roomId, body.from, body.to, body.content, { kind: "player", viewer: body.from });
+      const error = events.find((e) => e.type === "gossip.error");
+      if (error && error.type === "gossip.error") {
+        return reply.code(200).send({ ok: false, code: error.code, message: error.message });
+      }
+      return { ok: true, events };
+    });
+
+    /** SSE：只推送该 actorId 收发的 gossip.message，其他人的私信不会到浏览器 */
+    app.get("/api/v1/rooms/:roomId/messages/stream", async (req, reply) => {
+      const { roomId } = req.params as { roomId: string };
+      if (!(await roomGate(roomId, reply))) return reply;
+      const q = req.query as { actorId?: string };
+      const viewer = q.actorId;
+      if (!viewer) return reply.code(400).send({ ok: false, code: "E_SCHEMA_INVALID", message: "actorId 必填" });
+      const access = await guardRoom(req, reply, deps, roomId, userIdOf, { actorId: viewer });
+      if (!access) return reply;
+      reply.raw.writeHead(200, {
+        "content-type": "text/event-stream; charset=utf-8",
+        "cache-control": "no-cache, no-transform",
+        connection: "keep-alive",
+        "x-accel-buffering": "no",
+      });
+      const send = (ev: GossipEvent): void => {
+        reply.raw.write(`event: ${ev.type}\ndata: ${JSON.stringify(ev)}\n\n`);
+      };
+      send({ type: "gossip.committed", ids: [] });
+      const off = gossip.subscribe(roomId, viewer, send);
+      const ping = setInterval(() => reply.raw.write(": ping\n\n"), 15_000);
+      ping.unref?.();
+      req.raw.on("close", () => { clearInterval(ping); off(); });
+    });
+  }
+
   app.get("/api/v1/rooms/:roomId/state", async (req, reply) => {
     const { roomId } = req.params as { roomId: string };
     if (!(await roomGate(roomId, reply))) return reply;
-const access = await guardRoom(req, reply, deps, roomId, userIdOf);
+    const access = await guardRoom(req, reply, deps, roomId, userIdOf);
     if (!access) return reply;
     // 原始快照里带着实体真名：未认识的人必须在这里也脱敏，否则"服务端不下发真名"
     // 只是口号——新建房间就能从 /state 看光所有 NPC（审阅 P0-1）。
@@ -410,12 +476,19 @@ const access = await guardRoom(req, reply, deps, roomId, userIdOf);
   app.get("/api/v1/rooms/:roomId/events", async (req, reply) => {
     const { roomId } = req.params as { roomId: string };
     if (!(await roomGate(roomId, reply))) return reply;
-    const access = await guardRoom(req, reply, deps, roomId, userIdOf);
+    const q = req.query as { fromSeq?: string; limit?: string; actorId?: string };
+    const viewer = q.actorId;
+    const access = await guardRoom(req, reply, deps, roomId, userIdOf, viewer ? { actorId: viewer } : {});
     if (!access) return reply;
-    const q = req.query as { fromSeq?: string; limit?: string };
     const from = Number(q.fromSeq ?? 0);
     const limit = Math.min(Number(q.limit ?? 200), 200);
-    const events = await deps.store.events(roomId, from, limit);
+    const allEvents = await deps.store.events(roomId, from, limit);
+    // dev/v2：msg.sent 带 audience，玩家非收发双方连历史事件都不能读（十审 P1）
+    const events = allEvents.filter((e) => {
+      if (e.type !== "msg.sent") return true;
+      if (!viewer || !Array.isArray(e.audience)) return false;
+      return e.audience.includes(viewer);
+    });
     // 历史回放同样脱敏：旧回合的叙事里可能带着尚未认识的人的真名
     const placeholders = unknownPlaceholders(await deps.store.snapshot(roomId), deps.appearance);
     return { events: maskNamesDeep(events, placeholders), lastSeq: events.length ? events[events.length - 1]!.seq : from };

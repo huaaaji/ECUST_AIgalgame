@@ -2,6 +2,12 @@
   "schemaVersion": 2,
   "events": [
     {
+      "type": "msg.sent",
+      "when": "msg.send 经 Arbiter 校验通过后",
+      "broadcast": false,
+      "audience": "[from, to] 在 Transport 前过滤，玩家非收发双方零可见"
+    },
+    {
       "type": "attr.changed",
       "when": "attr.delta / attr.set 应用成功后",
       "broadcast": true

@@ -60,7 +60,7 @@ export const ModuleManifestSchema = z
       .string()
       .regex(/^\d+\.\d+\.\d+$/, "version 必须是 semver，如 1.0.0")
       .describe("模块自身版本（semver），与契约版本无关"),
-    apiVersion: z.literal(2).describe("模块 API 版本；引擎只加载与自身 API_VERSION 相同的模块"),
+    apiVersion: z.literal(3).describe("模块 API 版本；引擎只加载与自身 API_VERSION 相同的模块"),
     dependsOn: z.array(IdSchema).max(16).optional().describe("依赖的其它模块 id，加载时拓扑排序"),
     capabilities: CapabilitiesSchema.optional(),
     priority: z

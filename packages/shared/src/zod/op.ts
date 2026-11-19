@@ -210,7 +210,21 @@ export const PlotUpsertArgsSchema = z
   .describe("plot.upsert：新建/更新剧情线，产出 plot.upserted；败露时转 leaked 并产出 plot.resolved");
 export type PlotUpsertArgsParsed = z.infer<typeof PlotUpsertArgsSchema>;
 
-// ---------------------------------------------------------------- 12 分支联合
+// ---------------------------------------------------------------- 13 msg.send（dev/v2）
+export const MsgSendArgsSchema = z
+  .object({
+    from: ActorIdSchema, to: ActorIdSchema,
+    kind: z.enum(["gossip", "reply", "player", "system"]),
+    content: z.string().min(1).max(400),
+    rootId: IdSchema.optional(), replyTo: IdSchema.optional(),
+    hop: z.number().int().min(0).max(12).optional(),
+    confidence: z.number().min(0).max(1).optional(),
+    visibility: z.literal("private").optional(),
+  })
+  .describe("msg.send：异步私信，只有目标与内容；产出 msg.sent，audience=[from,to]");
+export type MsgSendArgsParsed = z.infer<typeof MsgSendArgsSchema>;
+
+// ---------------------------------------------------------------- 13 分支联合
 export const ProposalSchema = z
   .discriminatedUnion("op", [
     z.object({ op: z.literal("attr.delta"), args: AttrDeltaArgsSchema, reason: ReasonSchema.optional(), by: BySchema.optional() }),
@@ -225,6 +239,7 @@ export const ProposalSchema = z
     z.object({ op: z.literal("scene.set"), args: SceneSetArgsSchema, reason: ReasonSchema.optional(), by: BySchema.optional() }),
     z.object({ op: z.literal("memory.write"), args: MemoryWriteArgsSchema, reason: ReasonSchema.optional(), by: BySchema.optional() }),
     z.object({ op: z.literal("plot.upsert"), args: PlotUpsertArgsSchema, reason: ReasonSchema.optional(), by: BySchema.optional() }),
+    z.object({ op: z.literal("msg.send"), args: MsgSendArgsSchema, reason: ReasonSchema.optional(), by: BySchema.optional() }),
   ])
   .describe("Proposal：模块/导演/记忆层唯一的输出形态；引擎裁决后才落库（I1 不变量）");
 export type ProposalParsed = z.infer<typeof ProposalSchema>;

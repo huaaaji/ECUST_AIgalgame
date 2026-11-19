@@ -28,6 +28,8 @@ export interface OpCtx {
    * 旧实现用 `tags.length` 当序号，同回合同 owner 同 tags 会撞 id（docs/08 §0 记录的真 bug）。
    */
   nextMemorySeq?: () => number;
+  /** dev/v2：本批消息序号，用于生成可回放的 msg id */
+  nextMessageSeq?: () => number;
 }
 
 /** 记忆的最小只读视图（避免 engine 的 ops 层依赖整个 Memory 服务） */
@@ -53,7 +55,7 @@ export interface OpLimits {
 }
 
 export type Failure = { code: string; detail: string };
-export type Emitted = { type: string; payload: unknown };
+export type Emitted = { type: string; payload: unknown; audience?: string[] };
 
 const KINDS = ["plr", "npc", "loc", "item", "fact", "lore", "plot"];
 const LINKS = ["knows", "owes", "holds", "present", "located_in", "member_of"];
@@ -347,7 +349,7 @@ export function validateOp(
       if (!owner) return { fail: fail("E_ENTITY_MISSING", `记忆所有者 ${a.ownerId} 不存在`) };
       // 代写资格按信封来源判定：引擎/导演可代写；回合骨架只能代写**在场**的 NPC
       // （"谁记得这一刻"由引擎按场景决定，但引擎之外的东西不能借回合格子给任意实体写记忆）
-      const proxy = trustedOrigin(ctx, ["engine", "tick", "dialogue", "plot"]);
+      const proxy = trustedOrigin(ctx, ["engine", "tick", "dialogue", "plot", "gossip"]);
       const turnProxy = trustedOrigin(ctx, ["turn"]) && ctx.state.room.scene.presentIds.includes(owner.id);
       if (!proxy && !turnProxy && owner.id !== ctx.cause.actorId) {
         return { fail: fail("E_FORBIDDEN", "只能写自己的记忆（视角化写入由引擎/导演骨架代写）") };
@@ -380,6 +382,39 @@ export function validateOp(
           },
         },
       };
+    }
+
+    case "msg.send": {
+      if (!trustedOrigin(ctx, ["engine", "tick", "dialogue", "plot", "gossip"])) return { fail: fail("E_FORBIDDEN", "msg.send 只能由引擎/导演发起") };
+      for (const forbidden of ["action", "notice", "coverAction", "channels"]) {
+        if (a[forbidden] !== undefined) return { fail: fail("E_SCHEMA_INVALID", `微信只有目标和内容，不接受 ${forbidden}`) };
+      }
+      if (!isId(a.from) || !isId(a.to) || a.from === a.to) return { fail: fail("E_SCHEMA_INVALID", "msg.send 需要不同的 from/to") };
+      if (!live(ctx.state, a.from) || !live(ctx.state, a.to)) return { fail: fail("E_ENTITY_MISSING", "私信收发双方必须存在且未删除") };
+      const kind = a.kind;
+      if (kind !== "gossip" && kind !== "reply" && kind !== "player" && kind !== "system") return { fail: fail("E_SCHEMA_INVALID", "msg.send 需要合法 kind") };
+      if (!isStr(a.content) || a.content.trim().length === 0 || a.content.length > 400) return { fail: fail("E_SCHEMA_INVALID", "微信内容必须是 1~400 字") };
+      if (a.rootId !== undefined && !isId(a.rootId)) return { fail: fail("E_SCHEMA_INVALID", "rootId 非法") };
+      if (a.replyTo !== undefined && !isId(a.replyTo)) return { fail: fail("E_SCHEMA_INVALID", "replyTo 非法") };
+      const hop = a.hop === undefined ? 0 : a.hop;
+      if (!isNum(hop) || !Number.isInteger(hop) || hop < 0 || hop > 12) return { fail: fail("E_OUT_OF_RANGE", "hop 必须是 0~12 的整数") };
+      const confidence = a.confidence === undefined ? 1 : a.confidence;
+      if (!isNum(confidence) || confidence < 0 || confidence > 1) return { fail: fail("E_OUT_OF_RANGE", "confidence 必须在 0~1") };
+      // reply 可以带 rootId 指回八卦链根，但它是直接回复（hop=0、confidence=1），不是转发
+      if (a.rootId !== undefined && kind !== "reply" && (hop < 1 || confidence > 0.95)) return { fail: fail("E_PRECONDITION", "转发必须 hop>=1 且 confidence 递减") };
+      for (const plot of ctx.state.plots) {
+        if (plot.status === "active" && plot.forbidReveal && a.content.includes(plot.forbidReveal)) {
+          return { fail: fail("E_FORBIDDEN", "微信内容命中 forbidReveal") };
+        }
+      }
+      const seq = ctx.nextMessageSeq?.() ?? 1;
+      const id = `msg_${ctx.cause.roomId}_${ctx.cause.id}_${seq}`;
+      const record = {
+        id, roomId: ctx.cause.roomId, from: a.from, to: a.to, kind,
+        content: a.content, rootId: a.rootId, replyTo: a.replyTo, hop, confidence,
+        visibility: "private" as const, createdAt: tick, seq,
+      };
+      return { event: { type: "msg.sent", payload: { message: record }, audience: [a.from, a.to] } };
     }
     case "plot.upsert": {
       if (!isStr(a.goal) || a.goal.length < 1) return { fail: fail("E_SCHEMA_INVALID", "plot.upsert 需要非空 goal") };

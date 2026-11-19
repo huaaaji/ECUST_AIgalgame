@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "modes": [
+    {
+      "id": "broadcast",
+      "label": "公开说",
+      "requiresAction": false,
+      "requiresTarget": false,
+      "targetChannels": [
+        "content",
+        "action"
+      ],
+      "otherChannels": [],
+      "addressedNotice": false,
+      "visibility": "public",
+      "targetPresence": "present"
+    },
+    {
+      "id": "addressed",
+      "label": "对某人说",
+      "requiresAction": false,
+      "requiresTarget": true,
+      "targetChannels": [
+        "content",
+        "action"
+      ],
+      "otherChannels": [
+        "content",
+        "action",
+        "notice"
+      ],
+      "addressedNotice": true,
+      "addressedNoticeText": "这句话是对 {target} 说的",
+      "visibility": "public",
+      "targetPresence": "present"
+    },
+    {
+      "id": "whisper",
+      "label": "悄悄话",
+      "requiresAction": true,
+      "requiresTarget": true,
+      "targetChannels": [
+        "content"
+      ],
+      "otherChannels": [
+        "action"
+      ],
+      "actionVocab": [
+        "凑近压低声音",
+        "侧身挡住话",
+        "附耳说了几句",
+        "把声音压得很低"
+      ],
+      "addressedNotice": false,
+      "visibility": "private",
+      "targetPresence": "present"
+    },
+    {
+      "id": "signal",
+      "label": "不动声色",
+      "requiresAction": true,
+      "requiresTarget": true,
+      "contentless": true,
+      "targetChannels": [
+        "action"
+      ],
+      "otherChannels": [
+        "action"
+      ],
+      "actionVocab": [
+        "目光扫过桌面",
+        "手指轻叩了两下",
+        "端起杯子没喝",
+        "微微偏了下头"
+      ],
+      "addressedNotice": false,
+      "visibility": "secret",
+      "targetPresence": "present"
+    },
+    {
+      "id": "dm",
+      "label": "私信",
+      "requiresAction": false,
+      "requiresTarget": true,
+      "targetChannels": [
+        "content"
+      ],
+      "otherChannels": [],
+      "visibility": "private",
+      "targetPresence": "any"
+    }
+  ]
+}

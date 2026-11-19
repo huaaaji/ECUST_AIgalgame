@@ -3,7 +3,7 @@
  *
  * 一次 apply = 逐条校验 → 在状态副本上试算 → 整批通过才追加事件。
  * 拦下的提案进 rejected[]（02 §4：坏条目丢弃、不阻断其余条目），
- * 唯一的例外是 op 名不在 12 个原语闭集内：那是代码写错了，整批回滚。
+ * 唯一的例外是 op 名不在 13 个原语闭集内：那是代码写错了，整批回滚。
  *
  * 回合预算：`xWritesPerTurn` / `maxDeltaPerTurn` 是**整回合**限额，不是单次 apply 的限额。
  * 同一回合拆成多次 apply 时，Turn 用 createTurnBudget() 建一个预算对象并在每次 apply 传同一个
@@ -245,12 +245,13 @@ export class DefaultArbiter {
     const events: Envelope[] = [];
     const applied: Proposal[] = [];
     const rejected: Rejected[] = [];
+    let msgSeq = 0;
 
     for (const proposal of ops) {
       const op = proposal && typeof proposal.op === "string" ? proposal.op : undefined;
       if (op === undefined || !(OP_NAMES as readonly string[]).includes(op)) {
         // 未知 op 不是"这条数据脏"，而是调用方版本不一致，继续跑只会写坏世界
-        rejected.push({ proposal, code: "E_ILLEGAL_OP", detail: `op ${String(op)} 不在 12 个原语闭集内` });
+        rejected.push({ proposal, code: "E_ILLEGAL_OP", detail: `op ${String(op)} 不在 13 个原语闭集内` });
         return { events: [], applied: [], rejected, fatal: true };
       }
       const args = proposal.args ?? {};
@@ -265,6 +266,10 @@ export class DefaultArbiter {
         nextMemorySeq: () => {
           budget.memSeq += 1;
           return budget.memSeq;
+        },
+        nextMessageSeq: () => {
+          msgSeq += 1;
+          return msgSeq;
         },
       };
       const result = validateOp(op as OpName, args, ctx, proposal, this.limits);
@@ -291,6 +296,7 @@ export class DefaultArbiter {
         type: result.event.type,
         payload: result.event.payload,
         causedBy: cause.id,
+        ...(result.event.audience ? { audience: result.event.audience } : {}),
       };
       events.push(env);
       applied.push(proposal);

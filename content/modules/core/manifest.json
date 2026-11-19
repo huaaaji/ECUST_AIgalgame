@@ -2,7 +2,7 @@
   "id": "core",
   "name": "基础行动",
   "version": "0.1.0",
-  "apiVersion": 2,
+  "apiVersion": 3,
   "dependsOn": [],
   "capabilities": {
     "intents": ["core.move", "core.look", "core.say"],
