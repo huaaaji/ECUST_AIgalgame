@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { MockLlm } from "../../../llm/src/mock.ts";
-import { loadConversationPolicy, loadModes } from "./delivery.ts";
-import { NpcAgent, buildNpcPrompt } from "./npc-agent.ts";
+import { deliver, loadConversationPolicy, loadModes } from "./delivery.ts";
+import { NpcAgent, buildNpcPrompt, formatDeliveryFor, nameFor, type PresentActor } from "./npc-agent.ts";
+import type { Delivery } from "../../../shared/src/index.ts";
 import { createInitialState } from "../projection.ts";
 
 const ROOT = new URL("../../../../", import.meta.url).pathname;
@@ -85,5 +86,47 @@ describe("v2 NPC agent（每个 NPC 独立一次 LLM）", () => {
     expect(prompt.indexOf("只输出 JSON")).toBeLessThan(prompt.indexOf("【这一轮】"));
     expect(prompt).toContain("私人记忆");
     expect(prompt).toContain("玩家在场");
+  });
+});
+
+describe("投递行目标语义（#145）", () => {
+  const present: PresentActor[] = [
+    { id: "plr_1", name: "你", kind: "plr" },
+    { id: "npc_lin", name: "林静", kind: "npc" },
+    { id: "npc_bai", name: "白晓通", kind: "npc" },
+  ];
+  const delivery = (over: Partial<Delivery> = {}): Delivery => ({
+    to: "npc_bai", speaker: "npc_lin", utteranceId: "u1", mode: "addressed",
+    channels: ["content"], content: "只对玩家说", target: "plr_1", ...over,
+  });
+
+  it("旁听者看到目标玩家时显示「玩家」，不是「你」", () => {
+    const line = formatDeliveryFor("npc_bai", present, delivery());
+    expect(line).toBe("林静 → 玩家（你是旁听，content）：只对玩家说");
+    expect(line).not.toContain("→ 你");
+  });
+
+  it("目标是自己时仍显示「你」", () => {
+    const line = formatDeliveryFor("npc_bai", present, delivery({ to: "npc_bai", target: "npc_bai" }));
+    expect(line).toBe("林静 → 你（content）：只对玩家说");
+  });
+
+  it("自己的话不再标成「你是旁听」，目标玩家显示「玩家」", () => {
+    const line = formatDeliveryFor("npc_lin", present, delivery({ speaker: "npc_lin", to: "npc_lin" }));
+    expect(line).toBe("你说 → 玩家（content）：只对玩家说");
+    expect(line).not.toContain("你是旁听");
+  });
+
+  it("自己的公开话显示「你公开说」", () => {
+    const line = formatDeliveryFor("npc_lin", present, delivery({ speaker: "npc_lin", to: "npc_lin", target: undefined }));
+    expect(line).toBe("你公开说（content）：只对玩家说");
+  });
+
+  it("目标玩家的 notice 用「玩家」替换模板", () => {
+    const [d] = deliver(
+      { id: "u1", speaker: "npc_lin", mode: "addressed", target: "plr_1", content: "只对玩家说" },
+      { recipients: ["npc_bai"], modes, nameOf: (id) => nameFor(present, id) },
+    );
+    expect(d?.notice).toBe("这句话是对 玩家 说的");
   });
 });

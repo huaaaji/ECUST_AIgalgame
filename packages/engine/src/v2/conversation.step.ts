@@ -13,7 +13,7 @@ import { deliver, validateUtterance } from "./delivery.ts";
 import { shouldWake, type SceneManager } from "./scene.ts";
 import { mentalFields, mentalProposal, memoryProposals, publicSceneText, utteranceFields } from "./conversation.helpers.ts";
 import type { ConversationDeps } from "./conversation.ts";
-import { formatDeliveryFor, type HistoryLine, type NpcDecisionResult, type PresentActor } from "./npc-agent.ts";
+import { formatDeliveryFor, nameFor, type HistoryLine, type NpcDecisionResult, type PresentActor } from "./npc-agent.ts";
 import type { TalkChannel } from "./talk-budget.ts";
 
 /** 重放一次落盘失败所需的全部输入；宿主重试时用同一 cause + expectedSeq 重新裁决 */
@@ -80,6 +80,7 @@ interface StepCtx {
   present: readonly ActorId[];
   actors: readonly PresentActor[];
   nameOf: (id: ActorId) => string;
+  displayNameOf: (id: ActorId) => string;
   kindOf: (id: ActorId) => string | undefined;
   playerId?: ActorId;
   seq: number;
@@ -119,7 +120,7 @@ function interject(ctx: StepCtx): boolean {
 
 /** ② 玩家发言：校验 + 审核必须在投递之前，坏话绝不能被别人看见 */
 async function playerStep(ctx: StepCtx): Promise<PlayerResult> {
-  const { deps, s, input, out, present, nameOf, state, seq } = ctx;
+  const { deps, s, input, out, present, displayNameOf, state, seq } = ctx;
   const raw = input.utterance;
   if (!raw) return { aborted: false, deliveries: [] };
   const v = validateUtterance(raw, deps.modes, deps.policy, present);
@@ -147,7 +148,7 @@ async function playerStep(ctx: StepCtx): Promise<PlayerResult> {
     out.push({ type: "conversation.error", sessionId: s.id, code: "E_CONTENT_BLOCKED", message: deps.policy.messages.auditUnavailable });
     return { aborted: true };
   }
-  const deliveries: ConversationEvent[] = deliver(utterance, { recipients: present, modes: deps.modes, noticeFor: nameOf, nameOf })
+  const deliveries: ConversationEvent[] = deliver(utterance, { recipients: present, modes: deps.modes, noticeFor: displayNameOf, nameOf: displayNameOf })
     .map((d) => ({ type: "conversation.utterance" as const, delivery: d }));
   return { aborted: false, utterance, deliveries };
 }
@@ -244,13 +245,13 @@ function planCalls(ctx: StepCtx, utterance?: Utterance): { npcId: ActorId; allow
 
 /** ⑤ 每个在场 NPC 各自一次 LLM；玩家不在场时受 autonomousWhenPlayerAbsent 控制 */
 async function decideStep(ctx: StepCtx, utterance?: Utterance): Promise<NpcResult[]> {
-  const { deps, s, state, nameOf } = ctx;
+  const { deps, s, state, nameOf, displayNameOf } = ctx;
   const hardCap = !!ctx.playerId && !utterance && !ctx.input.auto && deps.policy.npcHardCap > 0 && s.npcSpeechStreak >= deps.policy.npcHardCap;
   const listening = s.phase === "listening";
   const loc = deps.scene.location(s.id) ?? { locId: state.room.scene.locId };
   const planned = planCalls(ctx, utterance);
   return Promise.all(planned.map(async ({ npcId, allowSpeak }) => {
-    const hits = utterance ? deliver(utterance, { recipients: [npcId], modes: deps.modes, noticeFor: nameOf, nameOf }) : [];
+    const hits = utterance ? deliver(utterance, { recipients: [npcId], modes: deps.modes, noticeFor: displayNameOf, nameOf: displayNameOf }) : [];
     const own = await deps.memory.recall({
       roomId: s.roomId,
       ownerId: npcId,
@@ -285,7 +286,7 @@ async function decideStep(ctx: StepCtx, utterance?: Utterance): Promise<NpcResul
 
 /** ⑥ 扩面审核：不合规只丢这一位；心理活动含 plan */
 async function auditStep(ctx: StepCtx, decisions: NpcResult[], utterance?: Utterance): Promise<void> {
-  const { deps, s, out, present, nameOf } = ctx;
+  const { deps, s, out, present, displayNameOf } = ctx;
   for (const d of decisions) {
     const fields = d.decision.kind === "speak" ? utteranceFields(d.decision.utterance)
       : d.decision.kind === "think" ? mentalFields(d.decision.mental) : [];
@@ -300,7 +301,7 @@ async function auditStep(ctx: StepCtx, decisions: NpcResult[], utterance?: Utter
     }
     if (d.decision.kind === "speak") {
       const u = d.decision.utterance;
-      const spoken = deliver(u, { recipients: present, modes: deps.modes, noticeFor: nameOf, nameOf });
+      const spoken = deliver(u, { recipients: present, modes: deps.modes, noticeFor: displayNameOf, nameOf: displayNameOf });
       // 空 speak（所有通道都没内容）不投、也不占冷却（#133）
       if (spoken.length === 0) {
         ctx.outcomes.push({ ...outcomeOf(d, "silent"), reason: "empty" });
@@ -411,6 +412,7 @@ export async function runStep(
   const ctx: StepCtx = {
     deps, s, input, out, now, state, present, actors,
     nameOf: (id) => state.entities[id]?.name ?? id,
+    displayNameOf: (id) => nameFor(actors, id),
     kindOf: (id) => state.entities[id]?.kind,
     playerId: present.find((id) => state.entities[id]?.kind === "plr"),
     seq: await deps.store.load(s.roomId),

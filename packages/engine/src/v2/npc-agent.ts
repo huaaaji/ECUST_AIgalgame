@@ -121,7 +121,9 @@ function nameOf(args: NpcPromptArgs, who: ActorId): string {
 export function nameFor(present: readonly PresentActor[] | undefined, who: ActorId): string {
   if (present) {
     const hit = present.find((p) => p.id === who);
-    if (hit) return hit.name;
+    // #145：玩家实体在状态里的 name 是「你」；投递/notice 里要显示第三人称「玩家」，
+    // 否则旁听者会看到「X → 你（你是旁听）」，与「你是旁听」自相矛盾。
+    if (hit) return hit.kind === "plr" ? PLAYER_LABEL : hit.name;
   }
   return who;
 }
@@ -133,15 +135,25 @@ export function formatDeliveryFor(npcId: ActorId, present: readonly PresentActor
   const text = speaker === PLAYER_LABEL ? wrapPlayerText(body, PLAYER_LABEL) : body;
   const ch = d.channels.join("+");
   const target = d.target;
+  const targetLabel = target === npcId
+    ? "你"
+    : target
+      ? nameFor(present, target)
+      : "全场";
+  // #145：自己的话也不该说「你是旁听」；目标玩家统一显示「玩家」而不是实体名「你」
+  if (d.speaker === npcId) {
+    return target && target !== "all"
+      ? `你说 → ${targetLabel}（${ch}）：${text}`
+      : `你公开说（${ch}）：${text}`;
+  }
   if (!target || target === "all") {
     return `${speaker}公开说（${ch}）：${text}`;
   }
   if (target === npcId) {
     return `${speaker} → 你（${ch}）：${text}`;
   }
-  return `${speaker} → ${nameFor(present, target)}（你是旁听，${ch}）：${text}`;
+  return `${speaker} → ${targetLabel}（你是旁听，${ch}）：${text}`;
 }
-
 /** 兼容旧调用：等价于 formatDeliveryFor(args.npcId, args.present, d) */
 export function formatDelivery(args: NpcPromptArgs, d: Delivery): string {
   return formatDeliveryFor(args.npcId, args.present, d);
